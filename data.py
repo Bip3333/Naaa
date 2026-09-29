@@ -25,6 +25,28 @@ def load_settings(user_id):
         print("Settings load error:", e)
         return None
 
+
+# - Calendar 
+
+def add_calendar_item(user_id,title,date_start,date_end,start_time,end_time,description):
+    try:
+        result = (supabase.table("calendar_events").insert({"user_id": user_id,"title": title,"date_start": date_start,"date_end": date_end,"start_time": start_time,"end_time": end_time,"description": description}).execute())
+
+        return True, "event added"
+
+    except Exception as e:
+        print("Calendar add error", e)
+        return False, "Could not add event"
+
+def load_calender_events(user_id, week_start, week_end):
+    try:
+        result = (supabase.table("calendar_events").select("id, title, date, start_time, end_time, description").eq("user_id", user_id).gte("date", week_start.isoformat()).lte("date", week_end.isoformat()).order("date").order("start_time").execute())
+        return result.data
+
+    except Exception as e:
+        print("Calendar events load error", e)
+        return []
+
 # - Checklist
 
 def add_checklist_item(user_id, task):
@@ -68,12 +90,5 @@ def delete_checklist_item(user_id, item_id):
         print("Checklist delete error", e)
         return False, "could not delete task"
 
-def load_calender_events(user_id, week_start, week_end):
-    try:
-        result = (supabase.table("calendar_events").select("id, title, date, start_time, end_time, description").eq("user_id", user_id).gte("date", week_start.isoformat()).lte("date", week_end.isoformat()).order("date").order("start_time").execute())
-        return result.data
 
-    except Exception as e:
-        print("Calendar events load error", e)
-        return []
     

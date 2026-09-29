@@ -63,6 +63,7 @@ style.configure("Usericon.TButton", font=(15))
 style.configure("User_button.TButton",font=("Helvetica", 12))
 style.configure("Message_sign_in.TLabel",font=("bold", 12),foreground="red")
 style.configure("Message_login.TLabel",font=("bold", 12),foreground="red")
+style.configure("Error_style.TLabel",font=("bold", 12),foreground="red")
 
 # - List of all the themes
 
@@ -131,11 +132,12 @@ settings = ttk.Frame(folder)
 checklist = ttk.Frame(folder)
 current_tasks = ttk.Frame(folder)
 help = ttk.Frame(folder)
+calendar_creation = ttk.Frame(folder)
 user_page = ttk.Frame(folder)
 user_sign_in_page = ttk.Frame(folder)
 user_login_page = ttk.Frame(folder)
 
-for page in (home,calendar,settings,checklist,current_tasks,help,user_page,user_sign_in_page,user_login_page):
+for page in (home,calendar,settings,checklist,current_tasks,help,user_page,user_sign_in_page,user_login_page,calendar_creation):
     page.grid(row=0,column=0,sticky="nsew")
 
 # - Sidebar
@@ -156,10 +158,21 @@ current_week_start -= timedelta(days=current_week_start.weekday())
 
 # - Button functions
 
-def change_week(amount):
+def add_calendar_task():
+    if current_user is None:
+        error_calendar_message.config(text="Please login to use the calendar")
+
+
+
+def change_week(amount=None):
     global current_week_start, week_dates
 
-    current_week_start += timedelta(days=amount*7)
+    if amount is None:
+        today = datetime.now().date()
+        current_week_start = today - timedelta(days=today.weekday())
+
+    else:
+        current_week_start += timedelta(days=amount*7)
 
     week_dates = [current_week_start + timedelta(days=i) for i in range(7)]
 
@@ -210,8 +223,7 @@ def load_calendar():
         print(event)
         event_date = datetime.strptime(event["date"],"%Y-%m-%d").date()
 
-    test_event = ttk.Label(calendar_grid,text="Math",font=("Verdana",10,"bold"))   # This is a fake event to see if the calendar correctly shows the event, it should show maths being at 4PM on a thursday
-    test_event.grid(row=9,column=4,sticky="nsew",padx=4,pady=4)
+
 
 def delete_checklist_item(item_id):
     if current_user is None:
@@ -448,10 +460,12 @@ def show_page(page,title):
 
     elif current_user is None:
         hide_streak()
+        toggle_sidebar_frame.pack(side="left")
 
     else:
         toggle_sidebar_frame.pack(side="left")
         streak_frame.pack(side="right")
+    
 
 def toggle_sidebar():
     if sidebar.winfo_ismapped():
@@ -459,6 +473,35 @@ def toggle_sidebar():
 
     else:
         sidebar.grid()
+
+def check_dates(event=None):
+    start_date = datestart_task_calendar_creation.get_date()
+    end_date = dateend_task_calendar_creation.get_date()
+
+    if end_date < start_date:
+        dateend_task_calendar_creation.set_date(start_date)
+
+    elif end_date == start_date:
+
+        start_hour = start_time_calendar_creation.get()
+        end_hour = end_time_calendar_creation.get()
+
+        if start_hour and end_hour:
+
+            start_hour = datetime.strptime(start_hour, "%I %p").hour
+            end_hour = datetime.strptime(end_hour, "%I %p").hour
+
+            if end_hour <= start_hour:
+                end_time_calendar_creation.set("")
+
+
+
+def create_calendar_task():
+
+    if current_user is None:
+        return 
+
+        
 
 # - Sidebar content
 
@@ -521,11 +564,6 @@ mini_text_size.pack(pady=5)
 text_size = ttk.Entry(settings,width=20)
 text_size.pack(pady=(20, 30))
 
-# - Keybinds
-
-root.bind("<F11>", toggle_fullscreen)
-text_size.bind("<KeyRelease>", change_text_size)
-
 # - User content
 
 user_text_frame = ttk.Frame(user_page)
@@ -549,7 +587,7 @@ user_sign_up_button.pack(side="left",padx=5)
 user_login_button = ttk.Button(user_button_frame,text="Login",style=("User_button.TButton"),command=lambda: show_page(user_login_page,"User login"),width=15)
 user_login_button.pack(side="left",padx=10)
 
-guest_browse_button = ttk.Button(guest_frame,text="Browse features",style=("User_button.TButton"),width=15)
+guest_browse_button = ttk.Button(guest_frame,text="Browse features",style=("User_button.TButton"),width=15, command=lambda: show_page(home, "routineR"))
 guest_browse_button.pack(side="bottom",pady=50)
 
 # - User sign in content
@@ -680,8 +718,135 @@ previous_calendar_button.pack(side="left")
 next_calendar_button = ttk.Button(calendar_navigation,text="Next", command= lambda: change_week(1), style = "User_button.TButton")
 next_calendar_button.pack(side="right")
 
+Create_calendar_task = ttk.Button(calendar_navigation,text="Create task", command= lambda: show_page(calendar_creation, "Create task"), style = "User_button.TButton")
+Create_calendar_task.pack(side="right",padx=10)
+
+current_week_button = ttk.Button(calendar_navigation,text="Current week", command= lambda: change_week(), style="User_button.TButton")
+current_week_button.pack(side="left",padx=10)
+
 current_week_title = ttk.Label(calendar_navigation,text=current_week_start,font=("Verdana",14,"bold"))
 current_week_title.pack(side="left",expand=True)
+
+error_calendar_message = ttk.Label(calendar,text="",font=("Verdana",15,"bold"))
+error_calendar_message.pack(side="bottom",pady=50)
+
+# - Calendar creation content
+
+calendar_creation.rowconfigure(0, weight=1)
+calendar_creation.rowconfigure(1, weight=1)
+
+calendar_creation.columnconfigure(0, weight=1)
+calendar_creation.columnconfigure(1, weight=1)
+
+
+calendar_quadrant_1 = ttk.Frame(calendar_creation, relief="solid", borderwidth=1)
+calendar_quadrant_2 = ttk.Frame(calendar_creation, relief="solid", borderwidth=1)
+calendar_quadrant_3 = ttk.Frame(calendar_creation, relief="solid", borderwidth=1)
+calendar_quadrant_4 = ttk.Frame(calendar_creation, relief="solid", borderwidth=1)
+
+calendar_quadrant_1.grid(row=0,column=1, sticky="nsew", padx=10, pady=10)
+calendar_quadrant_2.grid(row=0,column=0, sticky="nsew", padx=10, pady=10)
+calendar_quadrant_3.grid(row=1,column=0, sticky="nsew", padx=10, pady=10)
+calendar_quadrant_4.grid(row=1,column=1, sticky="nsew", padx=10, pady=10)
+
+# Top half of quad 1
+
+date_frame = ttk.Frame(calendar_quadrant_1)
+date_frame.pack(fill="both", padx=20, pady=10, expand=True)
+
+date_frame.columnconfigure(0, weight=1)
+date_frame.columnconfigure(1, weight=1)
+
+# Bottom half of quad 1
+
+time_frame = ttk.Frame(calendar_quadrant_1)
+time_frame.pack(fill="both", padx=20,pady=10, expand=True)
+
+time_frame.columnconfigure(0, weight=1)
+time_frame.columnconfigure(1, weight=1)
+
+
+
+
+
+
+
+top_of_4th_quadrant = ttk.Frame(calendar_quadrant_4)
+top_of_4th_quadrant.pack(fill="x",anchor="n")
+
+
+# - Quad 2
+
+name_task_calendar_creation_label = ttk.Label(calendar_quadrant_2,text="Enter the name of the task",font=("Verdana",10,"bold"))
+name_task_calendar_creation_label.pack(pady=(10,10))
+
+name_task_calendar_creation = ttk.Entry(calendar_quadrant_2,width=50)
+name_task_calendar_creation.pack()
+
+error_quad_2 = ttk.Label(calendar_quadrant_2,text="",style=("Error_style.TLabel"))
+error_quad_2.pack(side="bottom",pady=10)
+
+# - Quad 4
+
+button_calendar_create = ttk.Button(top_of_4th_quadrant,text="Create task",style="User_button.TButton")
+button_calendar_create.pack(side="left",padx=10,pady=10)
+
+details_task_calendar_creation_label = ttk.Label(top_of_4th_quadrant,text="(Optional) Enter description of the task",font=("Verdana",10,"bold"))
+details_task_calendar_creation_label.pack(pady=(10,10))
+
+details_task_calendar_creation = ttk.Entry(top_of_4th_quadrant,width=50)
+details_task_calendar_creation.pack()
+
+# - Quad 3
+
+optional_task_calendar_creation_label = ttk.Label(calendar_quadrant_3,text="Settings for the task",font=("Verdana",10,"bold"))
+optional_task_calendar_creation_label.pack(pady=(10,10))
+
+should_repeat_label = ttk.Label(calendar_quadrant_3,text="Should the task repeat",font=("Verdana",10,"bold"))
+should_repeat_label.pack(side="top")
+
+should_repeat = ttk.Combobox(calendar_quadrant_3,width=20,values=["Yes","No"],style=("ChangeTheme.TCombobox"))
+should_repeat.pack(side="top")
+
+error_quad_3 = ttk.Label(calendar_quadrant_3,text="",style=("Error_style.TLabel"))
+error_quad_2.pack(side="bottom",pady=10)
+
+# - Quad 1
+
+date_task_calendar_creation_label = ttk.Label(date_frame,text="Enter the start date of the task",font=("Verdana",10,"bold"))
+date_task_calendar_creation_label.grid(row=0,column=0)
+
+datestart_task_calendar_creation = ttk.DateEntry(date_frame,width=20,dateformat="%d/%m/%Y")
+datestart_task_calendar_creation.grid(row=1,column=0)
+
+dateend_task_calendar_creation_label = ttk.Label(date_frame,text="Enter end date of the task", font=("Verdana",10,"bold"))
+dateend_task_calendar_creation_label.grid(row=0,column=1)
+
+dateend_task_calendar_creation = ttk.DateEntry(date_frame,width=20,dateformat="%d/%m/%Y")
+dateend_task_calendar_creation.grid(row=1,column=1)
+
+# Time quad 1
+
+start_time_calendar_creation_label = ttk.Label(time_frame,text="Enter the start time of the task",font=("Verdana",10,"bold"))
+start_time_calendar_creation_label.grid(row=0,column=0)
+
+start_time_calendar_creation = ttk.Combobox(time_frame,values=["8 AM", "9 AM", "10 AM", "11 AM","12 PM", "1 PM", "2 PM", "3 PM","4 PM", "5 PM", "6 PM", "7 PM", "8 PM"],state="readonly",width=20,style=("ChangeTheme.TCombobox"))
+start_time_calendar_creation.grid(row=1,column=0)
+
+end_time_calendar_creation_label = ttk.Label(time_frame,text="Enter the end time of the task",font=("Verdana",10,"bold"))
+end_time_calendar_creation_label.grid(row=0,column=1)
+
+end_time_calendar_creation = ttk.Combobox(time_frame,values=["8 AM", "9 AM", "10 AM", "11 AM","12 PM", "1 PM", "2 PM", "3 PM","4 PM", "5 PM", "6 PM", "7 PM", "8 PM"],state="readonly",width=20,style=("ChangeTheme.TCombobox"))
+end_time_calendar_creation.grid(row=1,column=1)
+                                
+# - Keybinds
+
+root.bind("<F11>", toggle_fullscreen)
+text_size.bind("<KeyRelease>", change_text_size)
+datestart_task_calendar_creation.bind("<<DateEntrySelected>>",check_dates)
+dateend_task_calendar_creation.bind("<<DateEntrySelected>>",check_dates)
+start_time_calendar_creation.bind("<<ComboboxSelected>>",check_dates)
+end_time_calendar_creation.bind("<<ComboboxSelected>>",check_dates)
 
 load_calendar()
 hide_streak()
@@ -690,3 +855,4 @@ sidebar.grid_remove()
 home.tkraise()
 root.protocol("WM_DELETE_WINDOW", close_app)
 root.mainloop()
+
