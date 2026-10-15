@@ -856,3 +856,5 @@ home.tkraise()
 root.protocol("WM_DELETE_WINDOW", close_app)
 root.mainloop()
 
+
+#holy yap bro 860 lines is crazy
